@@ -1,55 +1,55 @@
-/*  DON'T FORGET TO INSTALL ARDUINO LIBRARY FOR:
-    1. Cytron Motor Driver Library
-    2. HCSR04
-*/
-
 #include "CytronMotorDriver.h"
-CytronMD motorLeft(PWM_DIR,11,10);  
-CytronMD motorRight(PWM_DIR,9,3); 
-
-#include <HCSR04.h>
-UltraSonicDistanceSensor distanceSensor(5,4);
-
-#define BUTTON    2
+CytronMD motorLeft  (PWM_PWM, 11, 10);
+CytronMD motorRight (PWM_PWM, 9, 3);
 #define IR_LEFT   A0
 #define IR_RIGHT  A1
-#define BUZZER    8
+#define TRIGPIN   5
+#define ECHOPIN   4
 
-void setup() 
-{ 
-  pinMode(BUTTON,INPUT_PULLUP);
-  pinMode(IR_LEFT,INPUT);
-  pinMode(IR_RIGHT,INPUT);  
-  pinMode(BUZZER,OUTPUT);
-  Serial.begin(9600);
+//Declare variable
+long duration;
+long distance;
+
+void robotStop() {
+  motorLeft.setSpeed(0);
+  motorRight.setSpeed(0);
+}
+void robotMove(int speedLeft, int speedRight) {
+  motorLeft.setSpeed(speedLeft);
+  motorRight.setSpeed(speedRight);
+}
+void readUltrasonic(){ 
+  digitalWrite(TRIGPIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIGPIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIGPIN, LOW);
+  duration = pulseIn(ECHOPIN, HIGH);
+  distance = duration * 0.017;
 }
 
-void loop() 
-{ 
-  Serial.println(distanceSensor.measureDistanceCm()); //Paparkan nilai ultrasonik
-  //Jika jarak objek KURANG 10cm dari PikaBot 
-  if(distanceSensor.measureDistanceCm()<10 && distanceSensor.measureDistanceCm()!=-1) 
-  { //PikaBot henti
-    motorLeft.setSpeed(0);
-    motorRight.setSpeed(0); 
+void setup() {
+  pinMode(IR_LEFT,  INPUT);
+  pinMode(IR_RIGHT, INPUT);
+  pinMode(TRIGPIN,  OUTPUT);
+  pinMode(ECHOPIN,  INPUT);
+}
+
+void loop(){ 
+  readUltrasonic();
+
+  if(distance < 10) {
+    robotStop();
   }
-  //Jika jarak objek MELEBIHI 10cm dari PikaBot -> IKUT GARISAN
-  if(distanceSensor.measureDistanceCm()>=10)
-  { //Pernyataan logik bagi MAJU mengikut garisan hitam
-    if(digitalRead(IR_LEFT)==LOW && digitalRead(IR_RIGHT)==LOW) 
-    { //PikaBot maju
-      motorLeft.setSpeed(120);
-      motorRight.setSpeed(120);
+  if(distance >=10) {
+    if (digitalRead(IR_LEFT)==LOW && digitalRead(IR_RIGHT)==LOW) {
+      robotMove(200, 200);  //Robot moves forward
     }
-    if(digitalRead(IR_LEFT)==HIGH)  
-    { //Belok kiri jika IR kiri atas garisan
-      motorLeft.setSpeed(-200);
-      motorRight.setSpeed(120);
+    else if (digitalRead(IR_LEFT)==HIGH) {
+      robotMove(0, 200);      //Robot turns left
     }
-    if(digitalRead(IR_RIGHT)==HIGH)
-    { //Belok kanan jika IR kanan atas garisan
-      motorLeft.setSpeed(120);
-      motorRight.setSpeed(-200);
+    else if (digitalRead(IR_RIGHT)==HIGH) {
+      robotMove(200, 0);      //Robot turns right
     }
   }
 }
